@@ -1,70 +1,61 @@
 # passgen
 
-A customizable password generator CLI written in Go. Uses `crypto/rand` for cryptographically secure randomness.
+A customizable password generator with an interactive TUI, written in Go. Uses `crypto/rand` for cryptographically secure randomness.
 
 ## Installation
 
 ```bash
 git clone https://github.com/yourname/passgen
 cd passgen
+go mod download github.com/charmbracelet/bubbletea
+go mod download github.com/charmbracelet/lipgloss
+go mod tidy
 go build -o passgen .
-```
-
-Or install directly:
-
-```bash
-go install github.com/yourname/passgen@latest
 ```
 
 ## Usage
 
+```bash
+go run main.go
 ```
-passgen [flags]
-```
 
-### Flags
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `-length` | `16` | Password length |
-| `-count` | `1` | Number of passwords to generate |
-| `-upper` | `true` | Include uppercase letters (A-Z) |
-| `-lower` | `true` | Include lowercase letters (a-z) |
-| `-numbers` | `true` | Include numbers (0-9) |
-| `-symbols` | `true` | Include symbols (!@#...) |
-| `-no-ambig` | `false` | Exclude ambiguous characters (0, O, l, 1) |
-| `-no-repeats` | `false` | No character appears more than once |
-| `-custom` | `""` | Additional characters to include in pool |
-| `-separator` | `\n` | Separator between passwords |
-
-### Examples
+or after building:
 
 ```bash
-# Default: 16-char password with all types
-passgen
-
-# 32-char password, generate 5 at once
-passgen -length 32 -count 5
-
-# Lowercase + numbers only
-passgen -no-symbols -no-upper -length 12
-
-# No ambiguous chars, no repeats
-passgen -no-ambig -no-repeats -length 20
-
-# Include custom characters (e.g. currency symbols)
-passgen -custom "€£¥" -length 24
-
-# Ten passwords on one line, comma-separated
-passgen -length 8 -count 10 -separator ", "
-
-# Pin-style: numbers only, 6 digits
-passgen -no-upper -no-lower -no-symbols -length 6
+./passgen        # macOS/Linux
+passgen.exe      # Windows
 ```
+
+## Controls
+
+| Key | Action |
+|-----|--------|
+| `↑` / `↓` | Navigate between fields |
+| `←` / `→` | Adjust password length (4–64) |
+| `space` / `enter` | Toggle a checkbox or confirm selection |
+| `enter` on custom chars | Start typing custom characters |
+| `enter` / `esc` | Stop typing custom characters |
+| `enter` on Generate | Generate a new password |
+| `q` / `ctrl+c` | Quit |
+
+## Options
+
+| Option | Description |
+|--------|-------------|
+| Length | Slider from 4 to 64 characters |
+| Uppercase (A–Z) | Toggle on/off |
+| Lowercase (a–z) | Toggle on/off |
+| Numbers (0–9) | Toggle on/off |
+| Symbols (!@#...) | Toggle on/off |
+| Exclude ambiguous | Removes 0, O, l, 1 from the pool |
+| No repeating chars | Each character appears at most once |
+| Custom chars | Any extra characters to add to the pool |
+
+At least one of uppercase, lowercase, numbers, or symbols must remain enabled.
 
 ## Notes
 
 - Randomness comes from `crypto/rand`, not `math/rand` — safe for real use.
-- `-no-repeats` requires the pool to be at least as large as `-length`.
-- Strength info (weak/fair/good/strong) is printed to stderr so it doesn't pollute piped output.
+- No repeating chars requires the pool to be at least as large as the chosen length.
 - Custom characters are deduplicated before use.
+- A color-coded strength bar (weak → fair → good → strong) is shown after each generation.
