@@ -45,11 +45,21 @@ type GenerateResponse struct {
 
 func buildPool(req GenerateRequest) (string, error) {
 	var pool strings.Builder
-	if req.Upper   { pool.WriteString(charUpper) }
-	if req.Lower   { pool.WriteString(charLower) }
-	if req.Numbers { pool.WriteString(charNumbers) }
-	if req.Symbols { pool.WriteString(charSymbols) }
-	if req.Custom != "" { pool.WriteString(req.Custom) }
+	if req.Upper {
+		pool.WriteString(charUpper)
+	}
+	if req.Lower {
+		pool.WriteString(charLower)
+	}
+	if req.Numbers {
+		pool.WriteString(charNumbers)
+	}
+	if req.Symbols {
+		pool.WriteString(charSymbols)
+	}
+	if req.Custom != "" {
+		pool.WriteString(req.Custom)
+	}
 
 	result := pool.String()
 
@@ -103,18 +113,34 @@ func generateOne(pool string, length int, noRepeats bool) (string, error) {
 }
 
 func strengthScore(pass string) int {
-	if pass == "" { return 0 }
+	if pass == "" {
+		return 0
+	}
 	score := 0
-	if len(pass) >= 8  { score++ }
-	if len(pass) >= 16 { score++ }
-	if strings.ContainsAny(pass, charUpper) && strings.ContainsAny(pass, charLower) { score++ }
-	if strings.ContainsAny(pass, charNumbers) { score++ }
-	if strings.ContainsAny(pass, charSymbols) { score++ }
+	if len(pass) >= 8 {
+		score++
+	}
+	if len(pass) >= 16 {
+		score++
+	}
+	if strings.ContainsAny(pass, charUpper) && strings.ContainsAny(pass, charLower) {
+		score++
+	}
+	if strings.ContainsAny(pass, charNumbers) {
+		score++
+	}
+	if strings.ContainsAny(pass, charSymbols) {
+		score++
+	}
 	switch {
-	case score <= 1: return 1
-	case score <= 2: return 2
-	case score <= 3: return 3
-	default:         return 4
+	case score <= 1:
+		return 1
+	case score <= 2:
+		return 2
+	case score <= 3:
+		return 3
+	default:
+		return 4
 	}
 }
 
@@ -141,10 +167,23 @@ func handleGenerate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Length < 4  { req.Length = 4 }
-	if req.Length > 64 { req.Length = 64 }
-	if req.Count < 1   { req.Count = 1 }
-	if req.Count > 20  { req.Count = 20 }
+	if req.Length < 4 {
+		req.Length = 4
+	}
+	if req.Length > 64 {
+		req.Length = 64
+	}
+	if req.Count < 1 {
+		req.Count = 1
+	}
+	if req.Count > 20 {
+		req.Count = 20
+	}
+
+	if !req.Upper && !req.Lower && !req.Numbers && !req.Symbols && req.Custom == "" {
+		req.Lower = true
+		req.Numbers = true
+	}
 
 	pool, err := buildPool(req)
 	if err != nil {
