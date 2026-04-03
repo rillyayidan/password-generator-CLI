@@ -150,20 +150,31 @@ func strengthLabel(score int) string {
 
 // ── Handlers ──────────────────────────────────────────────────────────────────
 
-func handleGenerate(w http.ResponseWriter, r *http.Request) {
+func writeJSON(w http.ResponseWriter, status int, payload interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.WriteHeader(status)
+	if err := json.NewEncoder(w).Encode(payload); err != nil {
+		http.Error(w, `{"error":"failed to encode response"}`, http.StatusInternalServerError)
+	}
+}
 
+func handleGenerate(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodOptions {
-		w.Header().Set("Access-Control-Allow-Methods", "POST")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, GenerateResponse{Error: "method not allowed"})
 		return
 	}
 
 	var req GenerateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		json.NewEncoder(w).Encode(GenerateResponse{Error: "invalid request"})
+		writeJSON(w, http.StatusBadRequest, GenerateResponse{Error: "invalid request"})
 		return
 	}
 
@@ -187,7 +198,7 @@ func handleGenerate(w http.ResponseWriter, r *http.Request) {
 
 	pool, err := buildPool(req)
 	if err != nil {
-		json.NewEncoder(w).Encode(GenerateResponse{Error: err.Error()})
+		writeJSON(w, http.StatusBadRequest, GenerateResponse{Error: err.Error()})
 		return
 	}
 
@@ -195,14 +206,14 @@ func handleGenerate(w http.ResponseWriter, r *http.Request) {
 	for i := 0; i < req.Count; i++ {
 		pass, err := generateOne(pool, req.Length, req.NoRepeats)
 		if err != nil {
-			json.NewEncoder(w).Encode(GenerateResponse{Error: err.Error()})
+			writeJSON(w, http.StatusInternalServerError, GenerateResponse{Error: err.Error()})
 			return
 		}
 		passwords = append(passwords, pass)
 	}
 
 	score := strengthScore(passwords[0])
-	json.NewEncoder(w).Encode(GenerateResponse{
+	writeJSON(w, http.StatusOK, GenerateResponse{
 		Passwords: passwords,
 		Strength:  strengthLabel(score),
 		PoolSize:  len([]rune(pool)),
