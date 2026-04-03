@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -38,6 +39,7 @@ type GenerateResponse struct {
 	Passwords []string `json:"passwords"`
 	Strength  string   `json:"strength"`
 	PoolSize  int      `json:"poolSize"`
+	Count     int      `json:"count"`
 	Error     string   `json:"error,omitempty"`
 }
 
@@ -172,6 +174,7 @@ func handleGenerate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	defer r.Body.Close()
 	var req GenerateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSON(w, http.StatusBadRequest, GenerateResponse{Error: "invalid request"})
@@ -217,6 +220,7 @@ func handleGenerate(w http.ResponseWriter, r *http.Request) {
 		Passwords: passwords,
 		Strength:  strengthLabel(score),
 		PoolSize:  len([]rune(pool)),
+		Count:     len(passwords),
 	})
 }
 
@@ -231,9 +235,16 @@ func main() {
 	http.HandleFunc("/", handleIndex)
 	http.HandleFunc("/generate", handleGenerate)
 
-	port := "8080"
-	fmt.Printf("passgen running at http://localhost:%s\n", port)
-	if err := http.ListenAndServe(":"+port, nil); err != nil {
+	server := &http.Server{
+		Addr:         ":8080",
+		Handler:      nil,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  30 * time.Second,
+	}
+
+	fmt.Printf("passgen running at http://localhost%s\n", server.Addr)
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		fmt.Fprintln(os.Stderr, "server error:", err)
 		os.Exit(1)
 	}
