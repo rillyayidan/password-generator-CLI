@@ -19,6 +19,12 @@ const (
 	charNumbers = "0123456789"
 	charSymbols = "!@#$%^&*()-_=+[]{}|;:,.<>?"
 	charAmbig   = "0Ol1"
+
+	// Limits
+	minLength    = 4
+	maxLength    = 128
+	maxCount     = 20
+	maxCustomLen = 100
 )
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -41,6 +47,40 @@ type GenerateResponse struct {
 	PoolSize  int      `json:"poolSize"`
 	Count     int      `json:"count"`
 	Error     string   `json:"error,omitempty"`
+}
+
+// ── Validation ────────────────────────────────────────────────────────────────
+
+// validateRequest validates and normalizes the incoming request.
+func validateRequest(req *GenerateRequest) error {
+	// Clamp length
+	if req.Length < minLength {
+		req.Length = minLength
+	}
+	if req.Length > maxLength {
+		req.Length = maxLength
+	}
+
+	// Clamp count
+	if req.Count < 1 {
+		req.Count = 1
+	}
+	if req.Count > maxCount {
+		req.Count = maxCount
+	}
+
+	// Validate custom characters
+	if len(req.Custom) > maxCustomLen {
+		return fmt.Errorf("custom characters exceed max length (%d chars)", maxCustomLen)
+	}
+
+	// Ensure at least one character type is selected
+	if !req.Upper && !req.Lower && !req.Numbers && !req.Symbols && req.Custom == "" {
+		req.Lower = true
+		req.Numbers = true
+	}
+
+	return nil
 }
 
 // ── Core logic ────────────────────────────────────────────────────────────────
@@ -177,34 +217,24 @@ func handleGenerate(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	var req GenerateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSON(w, http.StatusBadRequest, GenerateResponse{Error: "invalid request"})
+		writeJSON(w, http.StatusBadRequest, GenerateResponse{Error: "invalid request: " + err.Error()})
 		return
 	}
 
-	if req.Length < 4 {
-		req.Length = 4
-	}
-	if req.Length > 64 {
-		req.Length = 64
-	}
-	if req.Count < 1 {
-		req.Count = 1
-	}
-	if req.Count > 20 {
-		req.Count = 20
+	// Validate and normalize request
+	if err := validateRequest(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, GenerateResponse{Error: err.Error()})
+		return
 	}
 
-	if !req.Upper && !req.Lower && !req.Numbers && !req.Symbols && req.Custom == "" {
-		req.Lower = true
-		req.Numbers = true
-	}
-
+	// Build character pool
 	pool, err := buildPool(req)
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, GenerateResponse{Error: err.Error()})
 		return
 	}
 
+	// Generate passwords
 	passwords := make([]string, 0, req.Count)
 	for i := 0; i < req.Count; i++ {
 		pass, err := generateOne(pool, req.Length, req.NoRepeats)
@@ -215,6 +245,7 @@ func handleGenerate(w http.ResponseWriter, r *http.Request) {
 		passwords = append(passwords, pass)
 	}
 
+	// Calculate strength and respond
 	score := strengthScore(passwords[0])
 	writeJSON(w, http.StatusOK, GenerateResponse{
 		Passwords: passwords,
@@ -244,6 +275,8 @@ func main() {
 	}
 
 	fmt.Printf("passgen running at http://localhost%s\n", server.Addr)
+	fmt.Printf("config: max-length=%d, max-count=%d, max-custom=%d\n", maxLength, maxCount, maxCustomLen)
+
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		fmt.Fprintln(os.Stderr, "server error:", err)
 		os.Exit(1)
@@ -652,7 +685,7 @@ const indexHTML = `<!DOCTYPE html>
         <span>length</span>
         <span class="val" id="lenVal">16</span>
       </div>
-      <input type="range" id="lengthSlider" min="4" max="64" value="16" step="1"
+      <input type="range" id="lengthSlider" min="4" max="128" value="16" step="1"
         oninput="document.getElementById('lenVal').textContent = this.value">
     </div>
 
