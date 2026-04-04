@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -70,7 +71,7 @@ func validateRequest(req *GenerateRequest) error {
 	}
 
 	// Validate custom characters
-	if len(req.Custom) > maxCustomLen {
+	if utf8.RuneCountInString(req.Custom) > maxCustomLen {
 		return fmt.Errorf("custom characters exceed max length (%d chars)", maxCustomLen)
 	}
 
@@ -124,12 +125,13 @@ func buildPool(req GenerateRequest) (string, error) {
 		}
 	}
 	result = deduped.String()
+	poolLen := utf8.RuneCountInString(result)
 
 	if result == "" {
 		return "", fmt.Errorf("character pool is empty — enable at least one character type")
 	}
-	if req.NoRepeats && req.Length > len([]rune(result)) {
-		return "", fmt.Errorf("pool too small (%d chars) for no-repeats at length %d", len([]rune(result)), req.Length)
+	if req.NoRepeats && req.Length > poolLen {
+		return "", fmt.Errorf("pool too small (%d chars) for no-repeats at length %d", poolLen, req.Length)
 	}
 	return result, nil
 }
