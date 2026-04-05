@@ -195,10 +195,12 @@ func strengthLabel(score int) string {
 // ── Handlers ──────────────────────────────────────────────────────────────────
 
 func writeJSON(w http.ResponseWriter, status int, payload interface{}) {
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(payload); err != nil {
+	encoder := json.NewEncoder(w)
+	encoder.SetEscapeHTML(false)
+	if err := encoder.Encode(payload); err != nil {
 		http.Error(w, `{"error":"failed to encode response"}`, http.StatusInternalServerError)
 	}
 }
@@ -252,9 +254,24 @@ func handleGenerate(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, GenerateResponse{
 		Passwords: passwords,
 		Strength:  strengthLabel(score),
-		PoolSize:  len([]rune(pool)),
+		PoolSize:  utf8.RuneCountInString(pool),
 		Count:     len(passwords),
 	})
+}
+
+func strengthLabel(score int) string {
+	switch score {
+	case 1:
+		return "weak"
+	case 2:
+		return "fair"
+	case 3:
+		return "good"
+	case 4:
+		return "strong"
+	default:
+		return "unknown"
+	}
 }
 
 func handleIndex(w http.ResponseWriter, r *http.Request) {
