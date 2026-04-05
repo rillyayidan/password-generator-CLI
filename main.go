@@ -161,10 +161,10 @@ func strengthScore(pass string) int {
 		return 0
 	}
 	score := 0
-	if len(pass) >= 8 {
+	if utf8.RuneCountInString(pass) >= 8 {
 		score++
 	}
-	if len(pass) >= 16 {
+	if utf8.RuneCountInString(pass) >= 16 {
 		score++
 	}
 	if strings.ContainsAny(pass, charUpper) && strings.ContainsAny(pass, charLower) {
@@ -237,14 +237,14 @@ func handleGenerate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Generate passwords
-	passwords := make([]string, 0, req.Count)
+	passwords := make([]string, req.Count)
 	for i := 0; i < req.Count; i++ {
 		pass, err := generateOne(pool, req.Length, req.NoRepeats)
 		if err != nil {
 			writeJSON(w, http.StatusInternalServerError, GenerateResponse{Error: err.Error()})
 			return
 		}
-		passwords = append(passwords, pass)
+		passwords[i] = pass
 	}
 
 	// Calculate strength and respond
