@@ -5,8 +5,8 @@ A customizable password generator with a web frontend, written in Go. Uses `cryp
 ## Installation
 
 ```bash
-git clone https://github.com/yourname/passgen
-cd passgen
+git clone https://github.com/rillyayidan/password-generator-CLI.git
+cd password-generator
 go run main.go
 ```
 
@@ -22,7 +22,7 @@ passgen.exe      # Windows
 
 ## Features
 
-- **Length slider** — 4 to 64 characters
+- **Length slider** — 4 to 128 characters
 - **Character type toggles** — uppercase, lowercase, numbers, symbols
 - **Exclude ambiguous chars** — removes 0, O, l, 1 from the pool
 - **No repeating chars** — each character used at most once
