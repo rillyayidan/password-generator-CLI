@@ -188,10 +188,6 @@ func strengthScore(pass string) int {
 	}
 }
 
-func strengthLabel(score int) string {
-	return []string{"", "weak", "fair", "good", "strong"}[score]
-}
-
 // ── Handlers ──────────────────────────────────────────────────────────────────
 
 func writeJSON(w http.ResponseWriter, status int, payload interface{}) {
